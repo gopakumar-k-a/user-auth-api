@@ -1,12 +1,16 @@
-import { User } from "../models/User.js";
+// import { User } from "../models/User.js";
+import { User } from "../models/userModel.js";
 import { userValidator } from "../validators/userValidator.js";
 
 export const userController = {
   async getAllUsers(req, res) {
     try {
+      console.log("insde user controller");
 
-      const users = User.findAll();
-      res.json({users});
+      const users = await User.find();
+      console.log("users are ", users);
+
+      res.json({ users });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch users" });
     }
@@ -20,13 +24,19 @@ export const userController = {
       if (errors.length) {
         return res.status(400).json({ errors });
       }
-
-      if (User.findByEmail(userData.email)) {
+      const existingUser = await User.findOne({ email: userData.email });
+      if (existingUser) {
         return res.status(400).json({ error: "Email already registered" });
       }
+      console.log("userData ", userData);
 
-      const newUser = User.create(userData);
-      res.status(201).json(newUser);
+      const newUser = await User.create(userData);
+
+      const newUserObj = newUser.toObject();
+      delete newUserObj.createdAt;
+      delete newUserObj.updatedAt;
+      
+      res.status(201).json({ newUser: newUserObj });
     } catch (error) {
       res.status(500).json({ error: "Failed to create user" });
     }
@@ -34,8 +44,10 @@ export const userController = {
 
   async getUserById(req, res) {
     try {
-      const id = parseInt(req.params.id);
-      const user = User.findById(id);
+      const id = req.params.id;
+      console.log("id is ", id);
+
+      const user = await User.findById(id).select("-createdAt -updatedAt -__v");
 
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -49,7 +61,7 @@ export const userController = {
 
   async updateUser(req, res) {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const updates = req.body;
 
       const errors = userValidator.validateUpdate(updates);
@@ -58,17 +70,18 @@ export const userController = {
       }
 
       if (updates.email) {
-        const existingUser = User.findByEmail(updates.email);
-        if (existingUser && existingUser.id !== id) {
+        const existingUser = await User.findOne({ email: updates.email });
+        if (existingUser && existingUser._id !== id) {
           return res.status(400).json({ error: "Email already registered" });
         }
       }
-
-      const updatedUser = User.update(id, updates);
-      if (!updatedUser) {
+      const user = await User.findById(id);
+      if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-
+      Object.assign(user, updates);
+      const updatedUser = await user.save();
+      
       res.json(updatedUser);
     } catch (error) {
       res.status(500).json({ error: "Failed to update user" });
@@ -77,15 +90,17 @@ export const userController = {
 
   async deleteUser(req, res) {
     try {
-      const id = parseInt(req.params.id);
-
-      if (!User.findById(id)) {
+      const id = req.params.id;
+      const deletedUser = await User.findByIdAndDelete(id);
+      if (!deletedUser) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      User.delete(id);
+      // User.delete(id);
 
-      res.status(200).send({message:`user with id:${id} deleted successfully`});
+      res
+        .status(200)
+        .send({ message: `user with id:${id} deleted successfully` });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete user" });
     }
