@@ -8,7 +8,6 @@ export const verifyAccessToken = (req, res, next) => {
   }
 
   const token = authHeader.split(" ")[1];
-  console.log("token is ", token);
 
   const verificationResult = tokenVerifier.verifyAccessToken(token);
 

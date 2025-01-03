@@ -1,13 +1,12 @@
 import { User } from "../models/userModel.js";
 import { userValidator } from "../validators/userValidator.js";
+import { omit } from 'lodash-es';
+
 
 export const userController = {
   async getAllUsers(req, res) {
     try {
-      console.log("insde user controller");
-
       const users = await User.find();
-      console.log("users are ", users);
 
       res.json({ users });
     } catch (error) {
@@ -27,14 +26,11 @@ export const userController = {
       if (existingUser) {
         return res.status(400).json({ error: "Email already registered" });
       }
-      console.log("userData ", userData);
 
       const newUser = await User.create(userData);
 
-      const newUserObj = newUser.toObject();
-      delete newUserObj.createdAt;
-      delete newUserObj.updatedAt;
-      
+      const newUserObj = omit(newUser.toObject(), ['createdAt', 'updatedAt']);
+
       res.status(201).json({ newUser: newUserObj });
     } catch (error) {
       res.status(500).json({ error: "Failed to create user" });
@@ -44,7 +40,6 @@ export const userController = {
   async getUserById(req, res) {
     try {
       const id = req.params.id;
-      console.log("id is ", id);
 
       const user = await User.findById(id).select("-createdAt -updatedAt -__v");
 
@@ -80,7 +75,7 @@ export const userController = {
       }
       Object.assign(user, updates);
       const updatedUser = await user.save();
-      
+
       res.json(updatedUser);
     } catch (error) {
       res.status(500).json({ error: "Failed to update user" });

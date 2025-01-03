@@ -8,7 +8,6 @@ import jwt from 'jsonwebtoken'
 export const authController = {
   async registerUser(req, res) {
     try {
-      console.log("body in register is ", req.body);
 
       const errors = authValidator.validateRegister(req.body);
       if (errors.length) {
@@ -29,8 +28,6 @@ export const authController = {
 
       const createdUser = pick(newUser.toObject(), ["name", "email"]);
 
-      console.log("hashed password ", hashedPassword);
-      console.log("newUser ", newUser);
 
       res
         .status(201)
@@ -43,17 +40,14 @@ export const authController = {
   async loginUser(req, res) {
     try {
       const errors = authValidator.validateLogin(req.body);
-      console.log("login user ");
 
       if (errors.length) {
         return res.status(400).json({ errors });
       }
 
       const { email, password } = req.body;
-      console.log("email and password ", email, " ", password);
 
       const user = await User.findOne({ email });
-      console.log("user is ", user);
 
       if (!user) {
         return res.status(406).json({
@@ -67,12 +61,9 @@ export const authController = {
           message: "Invalid credentials",
         });
       }
-      // res.json({ message: "hi hello testing from login" });
       const accessToken = tokenGenerator.generateAccessToken(user._id);
       const refreshToken = tokenGenerator.generateRefreshToken(user._id);
 
-      console.log("access token ", accessToken);
-      console.log("refresh token ", refreshToken);
 
       res.cookie("jwt", refreshToken, {
         httpOnly: true,
@@ -89,21 +80,12 @@ export const authController = {
 
   async refreshToken(req,res) {
     try {
-      console.log('inside refresh');
-      console.log('req cookies ',req.cookies);
       
       if (req.cookies?.jwt) {
-        console.log('inside if');
         
         const refreshToken = req.cookies.jwt;
-
-        console.log('refreshtoken ',refreshToken);
-        // const decoded = jwt.verify(req.cookies?.jwt,'i0sX1cE5AU9Q4XFri0Blv94CSqMtCmxx0qcd4glHgfLTtrCdjEB3JvUjJppi6Hou');
-        // console.log('Decoded Token:', decoded);
-
         const verificationResult =
           tokenVerifier.verifyRefreshToken(refreshToken);
-console.log('verificationResult ',verificationResult);
 
         if (!verificationResult.valid) {
           return res
